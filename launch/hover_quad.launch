@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+<launch>
+
+  <arg name="ns" default="quad0"/>
+  <arg name="raw_odom" default="ground_truth/global_odom"/>
+  <arg name="odom" default="odom"/>
+  <arg name="range" default="2"/>
+  <arg name="alpha" default="0.6"/>
+  <arg name="red" default="0.1"/>
+  <arg name="green" default="0"/>
+  <arg name="blue" default="1"/>
+  <arg name="odom_frame" default="map"/>
+  <arg name="robot_frame" default="$(arg ns)/base_link"/>
+
+  <arg name="x" default="0.0"/>
+  <arg name="y" default="0.0"/>
+  <arg name="z" default="0.1"/>
+  <arg name="Y" default="0.0"/>
+  
+  <arg name="paused" default="false"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="gui" default="true"/>
+  <arg name="headless" default="false"/>
+  <arg name="debug" default="false"/>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="debug" value="$(arg debug)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+    <arg name="headless" value="$(arg headless)"/>
+  </include>
+
+	<!-- Spawn the World
+  <include file="$(find erl_models)/launch/spawn_world.launch">
+    <arg name="world" value="fla_warehouse1"/>
+    <arg name="scale" value="0.0254"/>
+    <arg name="gui" value="false"/>
+  </include> -->
+
+  <!-- Spawn the Quadrotor -->
+  <include file="$(find erl_models)/launch/spawn_robot.launch">
+    <arg name="ns" value="$(arg ns)"/>
+    <arg name="tf_prefix" value="$(arg ns)" />
+    <arg name="model" value="$(find bjorn_sim)/urdf/pelican.gazebo.xacro"/>
+    <arg name="px" value="$(arg x)" />
+    <arg name="py" value="$(arg y)" />
+    <arg name="pz" value="$(arg z)" />
+    <arg name="use_groundtruth_odom" value="true" />
+  </include>
+
+  <group ns="$(arg ns)">
+
+    <!-- #### Controller ##### -->
+    <node pkg="nodelet"
+      type="nodelet"
+      args="standalone so3_control/SO3ControlNodelet"
+      name="so3_control"
+      required="true"
+      output="screen">
+      <rosparam file="$(find so3_control)/config/gains.yaml"/>
+      <param name="mass" value="0.5"/>
+      <remap from="~odom" to="$(arg raw_odom)"/>
+      <remap from="~position_cmd" to="position_cmd"/>
+      <remap from="~so3_cmd" to="so3_cmd"/>
+      <remap from="~motors" to="motors"/>
+    </node>
+  
+  <!-- Launch rviz
+  <node pkg="rviz" type="rviz" name="rviz"
+        args="-d $(find erl_models)/rviz/pelican01.cfg.rviz"/> -->
+
+    <node pkg="bjorn_sim"
+      name="hover_cmd"
+      type="hover_cmd.py"
+      output="screen">
+    </node>
+  </group>
+
+</launch>
